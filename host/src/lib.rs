@@ -317,6 +317,13 @@ pub enum Error {
     /// Invalid value.
     InvalidValue,
 
+    /// Malformed AD structure in advertising data.
+    MalformedAdvertisementData,
+    /// Connectable advertising data is missing a discoverable Flags AD structure.
+    MissingDiscoverableFlags,
+    /// Flags AD structure is missing the BR/EDR Not Supported bit.
+    FlagsNotLeOnly,
+
     /// Unexpected data length.
     ///
     /// This happens if the attribute data length doesn't match the input length size,

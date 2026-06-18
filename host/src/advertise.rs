@@ -223,16 +223,32 @@ pub enum Advertisement<'d> {
 }
 
 impl<'d> Advertisement<'d> {
-    pub(crate) fn is_valid(&self) -> bool {
-        match self {
+    pub(crate) fn validate(&self) -> Result<(), crate::Error> {
+        let adv_data = match self {
             Advertisement::ConnectableScannableUndirected { adv_data, .. }
             | Advertisement::ExtConnectableNonscannableUndirected { adv_data }
-            | Advertisement::ExtConnectableNonscannableDirected { adv_data, .. } => {
-                // Connectable advertisements must have flags as the first advertisement data with the LE Only flag set
-                adv_data.len() >= 3 && adv_data[0] == 2 && adv_data[1] == 1 && (adv_data[2] & BR_EDR_NOT_SUPPORTED) != 0
+            | Advertisement::ExtConnectableNonscannableDirected { adv_data, .. } => adv_data,
+            _ => return Ok(()),
+        };
+
+        // A discoverable LE-only device must include a Flags AD with a discoverable-mode bit and the
+        // BR/EDR Not Supported bit (BT Core Spec Vol 3, Part C, Section 9.2.3.2 and 9.2.4.2). Section 11
+        // imposes no ordering on AD structures, so the Flags AD may appear anywhere in the stream.
+        let mut flags = None;
+        for ad in AdStructure::decode(adv_data) {
+            if let AdStructure::Flags(f) = ad.map_err(|_| crate::Error::MalformedAdvertisementData)? {
+                flags = Some(f);
+                break;
             }
-            _ => true,
         }
+        let flags = flags.ok_or(crate::Error::MissingDiscoverableFlags)?;
+        if flags & (AD_FLAG_LE_LIMITED_DISCOVERABLE | LE_GENERAL_DISCOVERABLE) == 0 {
+            return Err(crate::Error::MissingDiscoverableFlags);
+        }
+        if flags & BR_EDR_NOT_SUPPORTED == 0 {
+            return Err(crate::Error::FlagsNotLeOnly);
+        }
+        Ok(())
     }
 }
 impl<'d> From<Advertisement<'d>> for RawAdvertisement<'d> {

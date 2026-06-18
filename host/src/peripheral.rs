@@ -56,9 +56,7 @@ impl<'d, C: Controller, P: PacketPool> Peripheral<'d, C, P> {
     {
         let host = &self.host;
 
-        if !data.is_valid() {
-            return Err(BleHostError::BleHost(Error::InvalidValue));
-        }
+        data.validate()?;
 
         // Ensure no other advertise ongoing.
         let drop = crate::host::OnDrop::new(|| {
@@ -141,9 +139,7 @@ impl<'d, C: Controller, P: PacketPool> Peripheral<'d, C, P> {
     {
         let host = &self.host;
 
-        if !data.is_valid() {
-            return Err(BleHostError::BleHost(Error::InvalidValue));
-        }
+        data.validate()?;
 
         let data: RawAdvertisement = data.into();
         if !data.props.legacy_adv() {
@@ -192,9 +188,7 @@ impl<'d, C: Controller, P: PacketPool> Peripheral<'d, C, P> {
 
         // Check all sets are valid
         for set in sets.iter() {
-            if !set.data.is_valid() {
-                return Err(BleHostError::BleHost(Error::InvalidValue));
-            }
+            set.data.validate()?;
         }
 
         // Check host supports the required advertisement sets
@@ -300,9 +294,7 @@ impl<'d, C: Controller, P: PacketPool> Peripheral<'d, C, P> {
         assert_eq!(sets.len(), handles.len());
         let host = &self.host;
         for (i, set) in sets.iter().enumerate() {
-            if !set.data.is_valid() {
-                return Err(BleHostError::BleHost(Error::InvalidValue));
-            }
+            set.data.validate()?;
 
             let handle = handles[i].adv_handle;
             let data: RawAdvertisement<'k> = set.data.into();
